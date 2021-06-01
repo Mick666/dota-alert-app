@@ -6,7 +6,8 @@ const randomNumber = () => Math.floor(Math.random() * 21)
 
 const App = () => {
   const [clock, setClock] = useState('Waiting for a game') 
-  const [volumeSetting, setVolume] = useState(0.05)
+  const [mute, setMute] = useState(false)
+  const [volumeSetting, setVolume] = useState(5)
 
   const runes = new Audio("/havemoney.mp3")
   const sound = [new Audio("/helpornot.mp3"), 
@@ -33,17 +34,21 @@ const App = () => {
   let played = false
 
   useEffect(() => {
-    const interval = setInterval(() => loadData(volumeSetting), 1000)
+    const interval = setInterval(() => loadData(volumeSetting, mute), 1000)
     return () => {
       clearInterval(interval)
     }
   }, [volumeSetting])
 
   function handleChange(event) {
-    setVolume(event.target.value)
+    setVolume(Number(event.target.value))
   }  
 
-  function loadData(volumeSetting) {
+  const toggleChange = (event) => {
+    setMute(event.target.checked)
+  }
+
+  function loadData(volumeSetting, mute) {
     callBackendAPI()
     .then(res => {
       if (res.express[2] === "Waiting for a game") {
@@ -51,13 +56,15 @@ const App = () => {
         return;
       }
       setClock(`${res.express[0].toString().padStart(2, "0")}:${res.express[1].toString().padStart(2, "0")}`)
-      if ((res.express[0]+1) % 5 === 0 && (res.express[1] === 44 || res.express[1] === 43 || res.express[1] === 45) && !played) {
-        runes.volume = volumeSetting
+      const muteStatus = document.getElementById('mute-button').checked
+      if (muteStatus) return
+      else if ((res.express[0]+1) % 3 === 0 && (res.express[1] === 44 || res.express[1] === 43 || res.express[1] === 45) && !played) {
+        runes.volume = volumeSetting / 100
         runes.play();
         played = true;
       } else if ((res.express[1] === 44 || res.express[1] === 43 || res.express[1] === 45) && !played) {
         let randomNum = randomNumber();
-        sound[randomNum].volume = volumeSetting
+        sound[randomNum].volume = volumeSetting / 100
         sound[randomNum].play();
         played = true;
       } else if (res.express[1] === 0 || res.express[1] === 1 || res.express[1] === 2) {
@@ -67,7 +74,6 @@ const App = () => {
     .catch(err => console.log(err));
   }
 
-    // Fetches our GET route from the Express server. (Note the route we are fetching matches the GET route from server.js
   async function callBackendAPI () {
     const response = await axios.get('/express_backend');
     const body = response.data;
@@ -84,7 +90,8 @@ const App = () => {
       <div className = "clock">
         <h1>Dota 2 Camp Stacking and Bounty Rune reminder</h1>
         <p className="App-intro">{clock}</p>
-        <input value={volumeSetting} onChange={handleChange} />  
+        <input type='number' value={volumeSetting} onChange={handleChange} />  
+        <input type='checkbox' defaultChecked={mute} onChange={toggleChange} id="mute-button"/>
       </div>
     </div>
 
